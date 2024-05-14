@@ -33,7 +33,7 @@ class TrainConfig:
     device: str = "cuda"
     env: str = "halfcheetah-medium-expert-v2"  # OpenAI gym environment name
     seed: int = 0  # Sets Gym, PyTorch and Numpy seeds
-    eval_freq: int = int(5e3)  # How often (time steps) we evaluate
+    eval_freq: int = int(5e5)  # How often (time steps) we evaluate
     n_episodes: int = 10  # How many episodes run during evaluation
     max_timesteps: int = int(1e6)  # Max time steps to run environment
     checkpoints_path: Optional[str] = None  # Save path
@@ -53,9 +53,11 @@ class TrainConfig:
     actor_lr: float = 3e-4  # Actor learning rate
     actor_dropout: Optional[float] = None  # Adroit uses dropout for policy network
     # Wandb logging
-    project: str = "CORL"
-    group: str = "IQL-D4RL"
+    project: str = '[NIPS]_'+env
+    group: str = "IQL-D4RL-ReCORL"
     name: str = "IQL"
+    datapath: str = None
+    GDA: str = None # synther, GTA, S4RL
 
     def __post_init__(self):
         self.name = f"{self.name}-{self.env}-{str(uuid.uuid4())[:8]}"
@@ -77,6 +79,24 @@ def compute_mean_std(states: np.ndarray, eps: float) -> Tuple[np.ndarray, np.nda
 def normalize_states(states: np.ndarray, mean: np.ndarray, std: np.ndarray):
     return (states - mean) / std
 
+
+def merge_dictionary(list_of_Dict: List[Dict]) -> Dict:
+    merged_data = {}
+
+    for d in list_of_Dict:
+        for k, v in d.items():
+            if k not in ['observations', 'next_observations', 'actions', 'rewards', 'terminals', 'values', 'infos/goal']:
+                continue
+            else:
+                if k not in merged_data.keys():
+                    merged_data[k] = [v]
+                else:
+                    merged_data[k].append(v)
+
+    for k, v in merged_data.items():
+        merged_data[k] = np.concatenate(merged_data[k])
+
+    return merged_data
 
 def wrap_env(
     env: gym.Env,
@@ -107,6 +127,7 @@ class ReplayBuffer:
         action_dim: int,
         buffer_size: int,
         device: str = "cpu",
+        gda: str = None
     ):
         self._buffer_size = buffer_size
         self._pointer = 0
@@ -124,6 +145,12 @@ class ReplayBuffer:
         )
         self._dones = torch.zeros((buffer_size, 1), dtype=torch.float32, device=device)
         self._device = device
+        self.gda = gda
+
+        if self.gda == 'S4RL':
+            from torch.distributions import Normal, Uniform, Beta, Bernoulli
+            self.normal_distribution = Normal(loc=0, scale=0.0003)
+            print("S4RL Activated")
 
     def _to_tensor(self, data: np.ndarray) -> torch.Tensor:
         return torch.tensor(data, dtype=torch.float32, device=self._device)
@@ -154,6 +181,10 @@ class ReplayBuffer:
         rewards = self._rewards[indices]
         next_states = self._next_states[indices]
         dones = self._dones[indices]
+
+        if self.gda == 'S4RL':
+            state += self.normal_distribution.sample(state.shape).to(state.device)
+            next_state += self.normal_distribution.sample(state.shape).to(state.device)
         return [states, actions, rewards, next_states, dones]
 
     def add_transition(self):
@@ -521,7 +552,13 @@ def train(config: TrainConfig):
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
 
-    dataset = d4rl.qlearning_dataset(env)
+    if config.datapath:
+        if config.datapath.endswith("npz"):
+            dataset = merge_dictionary(np.load(config.datapath, allow_pickle=True)['data'])
+        elif config.datapath.endswith("pkl") or config.datapath.endswith("npy"):
+            dataset = merge_dictionary(np.load(config.datapath, allow_pickle=True))
+    else:
+        dataset = d4rl.qlearning_dataset(env)
 
     if config.normalize_reward:
         modify_reward(dataset, config.env)
