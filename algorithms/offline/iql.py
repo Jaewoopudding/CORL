@@ -554,12 +554,17 @@ def train(config: TrainConfig):
 
     if config.datapath:
         if config.datapath.endswith("npz"):
+            print("loading npz")
             dataset = merge_dictionary(np.load(config.datapath, allow_pickle=True)['data'])
         elif config.datapath.endswith("pkl") or config.datapath.endswith("npy"):
+            print("loading npy/pkl")
             dataset = merge_dictionary(np.load(config.datapath, allow_pickle=True))
+        else:
+            raise RuntimeError(f"that is wrong: {config.datapath}")
     else:
         dataset = d4rl.qlearning_dataset(env)
-
+        print("loading qlearning dataset")
+        
     if config.normalize_reward:
         modify_reward(dataset, config.env)
 
