@@ -8,7 +8,7 @@ device=cuda:0
 
 
 GDA=synther
-# datapath=/input/${env}.npz
+datapath=/input/${env}.npz
 # for seed in 0 1 2 3
 # do
 #     python algorithms/offline/iql.py --env=$env --config_path=$config_path --datapath=$datapath --device=$device --GDA=$GDA --seed=$seed --eval_freq=50000 &
