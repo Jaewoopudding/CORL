@@ -10,7 +10,7 @@ datapath=/home/orl/neurips/qlearningdataset/${env}.npy
 device=cuda:6
 GDA=None # S4RL, synther
 
-for seed in 0 1 2 3
+for seed in 4 5 6 7
 do
     python /home/jaewoo/academic/CORL/algorithms/offline/iql.py --env=$env --config_path=$config_path --datapath=$datapath --device=$device --GDA=$GDA --seed=$seed --eval_freq=50000 &
 done

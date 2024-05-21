@@ -13,8 +13,8 @@ do
     python algorithms/offline/iql.py --env=$env --config_path=$config_path--device=$device --GDA=$GDA --seed=$seed --eval_freq=50000 &
 done
 wait
-for seed in 4 5 6 7
-do
-    python algorithms/offline/iql.py --env=$env --config_path=$config_path --device=$device --GDA=$GDA --seed=$seed --eval_freq=50000 &
-done
-wait
+# for seed in 4 5 6 7
+# do
+#     python algorithms/offline/iql.py --env=$env --config_path=$config_path --device=$device --GDA=$GDA --seed=$seed --eval_freq=50000 &
+# done
+# wait
