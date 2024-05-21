@@ -554,8 +554,15 @@ def train(config: TrainConfig):
 
     if config.datapath:
         if config.datapath.endswith("npz"):
-            print("loading npz")
-            dataset = merge_dictionary(np.load(config.datapath, allow_pickle=True))
+            if config.GDA == 'gta':
+                print("loading gta npz")
+                dataset = merge_dictionary(np.load(config.datapath, allow_pickle=True)['data'])
+            elif config.GDA == 'synther':
+                print("loading gta npz")
+                synther_dataset = np.load(config.datapath, allow_pickle=True)
+                dataset = {}
+                for key in list(synther_dataset.keys()):
+                    dataset[key] = synther_dataset[key]
         elif config.datapath.endswith("pkl") or config.datapath.endswith("npy"):
             print("loading npy/pkl")
             dataset = merge_dictionary(np.load(config.datapath, allow_pickle=True))
